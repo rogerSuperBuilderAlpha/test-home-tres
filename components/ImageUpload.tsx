@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import { useIsMobile } from '@/lib/hooks';
 
 interface ImageUploadProps {
   onImageSelect: (base64: string) => void;
@@ -13,6 +14,7 @@ export default function ImageUpload({ onImageSelect, disabled = false }: ImageUp
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   const validateFile = (file: File): boolean => {
     setError(null);
@@ -118,38 +120,42 @@ export default function ImageUpload({ onImageSelect, disabled = false }: ImageUp
 
       {!preview ? (
         <div className="space-y-3">
-          {/* Camera Capture Button (Mobile Priority) */}
-          <button
-            type="button"
-            onClick={handleCameraClick}
-            disabled={disabled}
-            className="w-full py-4 px-6 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Take Photo with Camera
-          </button>
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFileInput}
-            disabled={disabled}
-            className="hidden"
-          />
+          {/* Camera Capture Button (Mobile Only) */}
+          {isMobile && (
+            <>
+              <button
+                type="button"
+                onClick={handleCameraClick}
+                disabled={disabled}
+                className="w-full py-4 px-6 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Take Photo with Camera
+              </button>
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileInput}
+                disabled={disabled}
+                className="hidden"
+              />
 
-          {/* Or Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">or</span>
-            </div>
-          </div>
+              {/* Or Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">or</span>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Drag & Drop / Upload Area */}
           <div

@@ -1,11 +1,19 @@
 /**
+ * Beverage category types
+ */
+export type BeverageCategory = 'spirits' | 'wine' | 'beer' | 'malt-beverages';
+
+/**
  * Form data submitted by the user
  */
 export interface LabelFormData {
+  beverageCategory?: BeverageCategory; // Optional category selector
   brandName: string;
   productType: string;
   alcoholContent: string; // Can be "45" or "45%"
   netContents: string; // e.g., "750 mL" or "12 fl oz"
+  sulfites?: string; // Wine-specific: Contains sulfites declaration
+  style?: string; // Beer-specific: Style (IPA, Stout, etc.)
 }
 
 /**

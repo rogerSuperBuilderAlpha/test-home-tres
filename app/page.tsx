@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import LabelForm from '@/components/LabelForm';
+import LoadingProgress from '@/components/LoadingProgress';
 import VerificationResults from '@/components/VerificationResults';
 import { LabelFormData, VerificationResult } from '@/types';
 
@@ -88,29 +89,7 @@ export default function Home() {
       <LabelForm onSubmit={handleSubmit} isLoading={isLoading} />
 
       {/* Loading State */}
-      {isLoading && (
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8 animate-fade-in">
-          <div className="flex flex-col items-center gap-4">
-            <svg className="animate-spin h-12 w-12 text-primary" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Processing Your Label...
-              </h3>
-              <div className="space-y-1 text-sm text-gray-600">
-                <p>📤 Uploading image...</p>
-                <p>🔍 Analyzing label with AI...</p>
-                <p>✅ Verifying information...</p>
-              </div>
-              <p className="mt-4 text-xs text-gray-500">
-                This may take 5-15 seconds depending on image size
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {isLoading && <LoadingProgress />}
 
       {/* Error State */}
       {error && (

@@ -1,6 +1,7 @@
 'use client';
 
 import { VerificationResult } from '@/types';
+import jsPDF from 'jspdf';
 
 interface VerificationResultsProps {
   result: VerificationResult;
@@ -9,6 +10,193 @@ interface VerificationResultsProps {
 
 export default function VerificationResults({ result, onReset }: VerificationResultsProps) {
   const { overallMatch, details, discrepancies } = result;
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 20;
+
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(0, 0, 0);
+    doc.text('TTB Label Verification Report', pageWidth / 2, y, { align: 'center' });
+    y += 10;
+
+    // Date
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, y, { align: 'center' });
+    y += 15;
+
+    // Overall Result
+    doc.setFontSize(16);
+    if (overallMatch) {
+      doc.setTextColor(16, 185, 129); // Green
+      doc.text('✓ VERIFICATION PASSED', pageWidth / 2, y, { align: 'center' });
+    } else {
+      doc.setTextColor(239, 68, 68); // Red
+      doc.text('✗ VERIFICATION FAILED', pageWidth / 2, y, { align: 'center' });
+    }
+    y += 10;
+
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(
+      overallMatch 
+        ? 'All information on the label matches the form data.'
+        : `${discrepancies.length} discrepancy(ies) found.`,
+      pageWidth / 2,
+      y,
+      { align: 'center' }
+    );
+    y += 15;
+
+    // Divider line
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, y, pageWidth - 20, y);
+    y += 10;
+
+    // Verification Details
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Verification Details', 20, y);
+    y += 10;
+
+    // Helper function to add field
+    const addField = (label: string, match: boolean, expected: string, found: string | null, confidence?: number) => {
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      
+      if (match) {
+        doc.setTextColor(16, 185, 129);
+        doc.text('✓', 20, y);
+      } else {
+        doc.setTextColor(239, 68, 68);
+        doc.text('✗', 20, y);
+      }
+      
+      doc.setTextColor(0, 0, 0);
+      doc.text(label, 30, y);
+      
+      if (confidence !== undefined) {
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`(${confidence}% confidence)`, 100, y);
+      }
+      
+      y += 6;
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Expected: ${expected}`, 30, y);
+      y += 5;
+      doc.text(`Found: ${found || 'Not found on label'}`, 30, y);
+      y += 8;
+    };
+
+    // Brand Name
+    addField(
+      'Brand Name',
+      details.brandName.match,
+      details.brandName.expected,
+      details.brandName.found,
+      details.brandName.confidence
+    );
+
+    // Product Type
+    addField(
+      'Product Type',
+      details.productType.match,
+      details.productType.expected,
+      details.productType.found,
+      details.productType.confidence
+    );
+
+    // Alcohol Content
+    addField(
+      'Alcohol Content',
+      details.alcoholContent.match,
+      details.alcoholContent.expected,
+      details.alcoholContent.found,
+      details.alcoholContent.confidence
+    );
+
+    // Net Contents
+    addField(
+      'Net Contents',
+      details.netContents.match,
+      details.netContents.expected,
+      details.netContents.found,
+      details.netContents.confidence
+    );
+
+    // Government Warning
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    if (details.governmentWarning.present) {
+      doc.setTextColor(16, 185, 129);
+      doc.text('✓', 20, y);
+    } else {
+      doc.setTextColor(239, 68, 68);
+      doc.text('✗', 20, y);
+    }
+    
+    doc.setTextColor(0, 0, 0);
+    doc.text('Government Warning', 30, y);
+    
+    if (details.governmentWarning.confidence !== undefined) {
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`(${details.governmentWarning.confidence}% confidence)`, 110, y);
+    }
+    
+    y += 6;
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    doc.text(
+      details.governmentWarning.text || (details.governmentWarning.present ? 'Present' : 'Missing'),
+      30,
+      y,
+      { maxWidth: pageWidth - 50 }
+    );
+    
+    if (details.governmentWarning.exact) {
+      y += 5;
+      doc.setTextColor(16, 185, 129);
+      doc.text('✓ Exact TTB-compliant warning text', 30, y);
+    }
+    
+    if (details.governmentWarning.missingPhrases && details.governmentWarning.missingPhrases.length > 0) {
+      y += 5;
+      doc.setTextColor(239, 68, 68);
+      doc.text('Missing phrases:', 30, y);
+      y += 5;
+      details.governmentWarning.missingPhrases.forEach(phrase => {
+        doc.text(`• ${phrase}`, 35, y);
+        y += 4;
+      });
+    }
+
+    y += 10;
+
+    // Footer
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, y, pageWidth - 20, y);
+    y += 7;
+    
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('TTB Label Verification System', 20, y);
+    doc.text('AI-Powered Label Compliance Checker', 20, y + 4);
+    doc.text('This report was generated automatically using OCR and AI verification.', 20, y + 8);
+
+    // Save the PDF
+    const filename = `TTB-Verification-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
+  };
 
   return (
     <div className="mt-8 animate-fade-in">
@@ -144,8 +332,17 @@ export default function VerificationResults({ result, onReset }: VerificationRes
         </div>
       </div>
 
-      {/* Action Button */}
-      <div className="mt-6 text-center">
+      {/* Action Buttons */}
+      <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center items-center">
+        <button
+          onClick={generatePDF}
+          className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors shadow-md flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Download PDF Report
+        </button>
         <button
           onClick={onReset}
           className="px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition-colors shadow-md"

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { LabelFormData } from '@/types';
+import { LabelFormData, BeverageCategory } from '@/types';
 import ImageUpload from './ImageUpload';
 
 interface LabelFormProps {
@@ -11,10 +11,13 @@ interface LabelFormProps {
 
 export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
   const [formData, setFormData] = useState<LabelFormData>({
+    beverageCategory: 'spirits',
     brandName: '',
     productType: '',
     alcoholContent: '',
     netContents: '',
+    sulfites: '',
+    style: '',
   });
   
   const [imageBase64, setImageBase64] = useState<string>('');
@@ -83,12 +86,61 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
   const isFormValid = formData.brandName && formData.productType && 
                      formData.alcoholContent && formData.netContents && imageBase64;
 
+  // Get field labels based on category
+  const getProductTypeLabel = () => {
+    switch (formData.beverageCategory) {
+      case 'beer':
+      case 'malt-beverages':
+        return 'Beer Style';
+      case 'wine':
+        return 'Wine Type/Varietal';
+      case 'spirits':
+      default:
+        return 'Product Class/Type';
+    }
+  };
+
+  const getProductTypePlaceholder = () => {
+    switch (formData.beverageCategory) {
+      case 'beer':
+      case 'malt-beverages':
+        return 'e.g., IPA, Stout, Lager';
+      case 'wine':
+        return 'e.g., Cabernet Sauvignon, Chardonnay';
+      case 'spirits':
+      default:
+        return 'e.g., Kentucky Straight Bourbon Whiskey, Vodka';
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6">Product Information</h2>
         
         <div className="space-y-5">
+          {/* Beverage Category */}
+          <div>
+            <label htmlFor="beverageCategory" className="block text-sm font-medium text-gray-700 mb-1">
+              Beverage Category <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="beverageCategory"
+              value={formData.beverageCategory}
+              onChange={(e) => handleInputChange('beverageCategory', e.target.value as BeverageCategory)}
+              disabled={isLoading}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              <option value="spirits">Distilled Spirits</option>
+              <option value="wine">Wine</option>
+              <option value="beer">Beer</option>
+              <option value="malt-beverages">Malt Beverages</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Select the type of alcoholic beverage
+            </p>
+          </div>
+
           {/* Brand Name */}
           <div>
             <label htmlFor="brandName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -118,7 +170,7 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
           {/* Product Type */}
           <div>
             <label htmlFor="productType" className="block text-sm font-medium text-gray-700 mb-1">
-              Product Class/Type <span className="text-red-500">*</span>
+              {getProductTypeLabel()} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -126,7 +178,7 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
               value={formData.productType}
               onChange={(e) => handleInputChange('productType', e.target.value)}
               disabled={isLoading}
-              placeholder="e.g., Kentucky Straight Bourbon Whiskey, IPA, Cabernet Sauvignon"
+              placeholder={getProductTypePlaceholder()}
               className={`
                 w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-primary
                 disabled:bg-gray-100 disabled:cursor-not-allowed
@@ -137,9 +189,34 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
               <p className="mt-1 text-sm text-error">{errors.productType}</p>
             )}
             <p className="mt-1 text-xs text-gray-500">
-              The general class or type of beverage (e.g., spirits designation, beer style, wine varietal)
+              {formData.beverageCategory === 'beer' || formData.beverageCategory === 'malt-beverages'
+                ? 'The style of beer (e.g., IPA, Stout, Lager)'
+                : formData.beverageCategory === 'wine'
+                ? 'The type or varietal of wine (e.g., Cabernet Sauvignon, Chardonnay)'
+                : 'The class/type designation (e.g., Bourbon, Vodka, Rum)'}
             </p>
           </div>
+
+          {/* Wine-specific: Sulfites Declaration */}
+          {(formData.beverageCategory === 'wine') && (
+            <div>
+              <label htmlFor="sulfites" className="block text-sm font-medium text-gray-700 mb-1">
+                Sulfites Declaration
+              </label>
+              <input
+                type="text"
+                id="sulfites"
+                value={formData.sulfites || ''}
+                onChange={(e) => handleInputChange('sulfites', e.target.value)}
+                disabled={isLoading}
+                placeholder="e.g., Contains Sulfites"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Wine labels typically include &quot;Contains Sulfites&quot; if sulfur dioxide is present
+              </p>
+            </div>
+          )}
 
           {/* Alcohol Content */}
           <div>
