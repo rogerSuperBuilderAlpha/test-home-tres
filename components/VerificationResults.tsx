@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { VerificationResult } from '@/types';
 import jsPDF from 'jspdf';
 
@@ -10,6 +11,47 @@ interface VerificationResultsProps {
 
 export default function VerificationResults({ result, onReset }: VerificationResultsProps) {
   const { overallMatch, details, discrepancies } = result;
+  
+  // Track manual overrides
+  const [overrides, setOverrides] = useState<{
+    brandName?: boolean;
+    productType?: boolean;
+    alcoholContent?: boolean;
+    netContents?: boolean;
+    governmentWarning?: boolean;
+  }>({});
+  
+  const [showOverrideMode, setShowOverrideMode] = useState(false);
+
+  // Calculate effective results with overrides
+  const getEffectiveMatch = (field: keyof typeof overrides, originalMatch: boolean) => {
+    return overrides[field] !== undefined ? overrides[field] : originalMatch;
+  };
+
+  const effectiveBrandMatch = getEffectiveMatch('brandName', details.brandName.match);
+  const effectiveTypeMatch = getEffectiveMatch('productType', details.productType.match);
+  const effectiveAlcoholMatch = getEffectiveMatch('alcoholContent', details.alcoholContent.match);
+  const effectiveVolumeMatch = getEffectiveMatch('netContents', details.netContents.match);
+  const effectiveWarningMatch = getEffectiveMatch('governmentWarning', details.governmentWarning.present);
+
+  const effectiveOverallMatch = effectiveBrandMatch && effectiveTypeMatch && 
+                                effectiveAlcoholMatch && effectiveVolumeMatch && effectiveWarningMatch;
+
+  const hasOverrides = Object.keys(overrides).length > 0;
+
+  const toggleOverride = (field: keyof typeof overrides, currentMatch: boolean) => {
+    setOverrides(prev => {
+      const newOverrides = { ...prev };
+      if (newOverrides[field] !== undefined) {
+        // Remove override if already set
+        delete newOverrides[field];
+      } else {
+        // Add override (flip the current state)
+        newOverrides[field] = !currentMatch;
+      }
+      return newOverrides;
+    });
+  };
 
   const generatePDF = () => {
     const doc = new jsPDF();
@@ -28,9 +70,11 @@ export default function VerificationResults({ result, onReset }: VerificationRes
     doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, y, { align: 'center' });
     y += 15;
 
-    // Overall Result
+    // Overall Result (use effective match if overrides exist)
+    const pdfOverallMatch = hasOverrides ? effectiveOverallMatch : overallMatch;
+    
     doc.setFontSize(16);
-    if (overallMatch) {
+    if (pdfOverallMatch) {
       doc.setTextColor(16, 185, 129); // Green
       doc.text('✓ VERIFICATION PASSED', pageWidth / 2, y, { align: 'center' });
     } else {
@@ -42,13 +86,21 @@ export default function VerificationResults({ result, onReset }: VerificationRes
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     doc.text(
-      overallMatch 
+      pdfOverallMatch 
         ? 'All information on the label matches the form data.'
         : `${discrepancies.length} discrepancy(ies) found.`,
       pageWidth / 2,
       y,
       { align: 'center' }
     );
+    
+    if (hasOverrides) {
+      y += 6;
+      doc.setTextColor(255, 153, 0); // Orange
+      doc.setFontSize(9);
+      doc.text('⚠ Contains manual overrides - see details below', pageWidth / 2, y, { align: 'center' });
+    }
+    
     y += 15;
 
     // Divider line
@@ -63,11 +115,21 @@ export default function VerificationResults({ result, onReset }: VerificationRes
     y += 10;
 
     // Helper function to add field
-    const addField = (label: string, match: boolean, expected: string, found: string | null, confidence?: number) => {
+    const addField = (
+      label: string, 
+      match: boolean, 
+      expected: string, 
+      found: string | null, 
+      confidence?: number,
+      overridden?: boolean,
+      effectiveMatch?: boolean
+    ) => {
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       
-      if (match) {
+      const displayMatch = effectiveMatch !== undefined ? effectiveMatch : match;
+      
+      if (displayMatch) {
         doc.setTextColor(16, 185, 129);
         doc.text('✓', 20, y);
       } else {
@@ -78,7 +140,11 @@ export default function VerificationResults({ result, onReset }: VerificationRes
       doc.setTextColor(0, 0, 0);
       doc.text(label, 30, y);
       
-      if (confidence !== undefined) {
+      if (overridden) {
+        doc.setFontSize(8);
+        doc.setTextColor(255, 153, 0);
+        doc.text('[MANUALLY OVERRIDDEN]', 100, y);
+      } else if (confidence !== undefined) {
         doc.setFontSize(9);
         doc.setTextColor(100, 100, 100);
         doc.text(`(${confidence}% confidence)`, 100, y);
@@ -92,6 +158,13 @@ export default function VerificationResults({ result, onReset }: VerificationRes
       doc.text(`Expected: ${expected}`, 30, y);
       y += 5;
       doc.text(`Found: ${found || 'Not found on label'}`, 30, y);
+      
+      if (overridden) {
+        y += 5;
+        doc.setTextColor(255, 153, 0);
+        doc.text(`Note: AI found mismatch, manually approved by reviewer`, 30, y);
+      }
+      
       y += 8;
     };
 
@@ -101,7 +174,9 @@ export default function VerificationResults({ result, onReset }: VerificationRes
       details.brandName.match,
       details.brandName.expected,
       details.brandName.found,
-      details.brandName.confidence
+      details.brandName.confidence,
+      overrides.brandName !== undefined,
+      effectiveBrandMatch
     );
 
     // Product Type
@@ -110,7 +185,9 @@ export default function VerificationResults({ result, onReset }: VerificationRes
       details.productType.match,
       details.productType.expected,
       details.productType.found,
-      details.productType.confidence
+      details.productType.confidence,
+      overrides.productType !== undefined,
+      effectiveTypeMatch
     );
 
     // Alcohol Content
@@ -119,7 +196,9 @@ export default function VerificationResults({ result, onReset }: VerificationRes
       details.alcoholContent.match,
       details.alcoholContent.expected,
       details.alcoholContent.found,
-      details.alcoholContent.confidence
+      details.alcoholContent.confidence,
+      overrides.alcoholContent !== undefined,
+      effectiveAlcoholMatch
     );
 
     // Net Contents
@@ -128,7 +207,9 @@ export default function VerificationResults({ result, onReset }: VerificationRes
       details.netContents.match,
       details.netContents.expected,
       details.netContents.found,
-      details.netContents.confidence
+      details.netContents.confidence,
+      overrides.netContents !== undefined,
+      effectiveVolumeMatch
     );
 
     // Government Warning
@@ -200,18 +281,18 @@ export default function VerificationResults({ result, onReset }: VerificationRes
 
   return (
     <div className="mt-8 animate-fade-in">
-      {/* Overall Status Banner */}
+      {/* Overall Status Banner (with overrides) */}
       <div
         className={`
           rounded-lg p-6 mb-6 border-2
-          ${overallMatch 
+          ${effectiveOverallMatch 
             ? 'bg-green-50 border-success text-green-900' 
             : 'bg-red-50 border-error text-red-900'
           }
         `}
       >
         <div className="flex items-center gap-3">
-          {overallMatch ? (
+          {effectiveOverallMatch ? (
             <svg className="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -220,17 +301,32 @@ export default function VerificationResults({ result, onReset }: VerificationRes
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           )}
-          <div>
+          <div className="flex-grow">
             <h2 className="text-2xl font-bold">
-              {overallMatch ? '✅ Label Verified Successfully!' : '❌ Label Verification Failed'}
+              {effectiveOverallMatch ? '✅ Label Verified Successfully!' : '❌ Label Verification Failed'}
+              {hasOverrides && (
+                <span className="ml-3 text-sm font-normal text-orange-600">
+                  (with manual overrides)
+                </span>
+              )}
             </h2>
             <p className="text-sm mt-1">
-              {overallMatch 
-                ? 'All information on the label matches the form data.' 
+              {effectiveOverallMatch 
+                ? hasOverrides 
+                  ? 'Verification passed with manual reviewer approval.'
+                  : 'All information on the label matches the form data.'
                 : `${discrepancies.length} ${discrepancies.length === 1 ? 'discrepancy' : 'discrepancies'} found.`
               }
             </p>
           </div>
+          {!overallMatch && (
+            <button
+              onClick={() => setShowOverrideMode(!showOverrideMode)}
+              className="px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"
+            >
+              {showOverrideMode ? 'Hide Override Options' : 'Manual Review'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -247,6 +343,10 @@ export default function VerificationResults({ result, onReset }: VerificationRes
               expected={details.brandName.expected}
               found={details.brandName.found}
               confidence={details.brandName.confidence}
+              overridden={overrides.brandName !== undefined}
+              effectiveMatch={effectiveBrandMatch}
+              onOverride={() => toggleOverride('brandName', details.brandName.match)}
+              showOverrideButton={showOverrideMode}
             />
 
             {/* Product Type */}
@@ -256,6 +356,10 @@ export default function VerificationResults({ result, onReset }: VerificationRes
               expected={details.productType.expected}
               found={details.productType.found}
               confidence={details.productType.confidence}
+              overridden={overrides.productType !== undefined}
+              effectiveMatch={effectiveTypeMatch}
+              onOverride={() => toggleOverride('productType', details.productType.match)}
+              showOverrideButton={showOverrideMode}
             />
 
             {/* Alcohol Content */}
@@ -265,6 +369,10 @@ export default function VerificationResults({ result, onReset }: VerificationRes
               expected={details.alcoholContent.expected}
               found={details.alcoholContent.found}
               confidence={details.alcoholContent.confidence}
+              overridden={overrides.alcoholContent !== undefined}
+              effectiveMatch={effectiveAlcoholMatch}
+              onOverride={() => toggleOverride('alcoholContent', details.alcoholContent.match)}
+              showOverrideButton={showOverrideMode}
             />
 
             {/* Net Contents */}
@@ -274,12 +382,16 @@ export default function VerificationResults({ result, onReset }: VerificationRes
               expected={details.netContents.expected}
               found={details.netContents.found}
               confidence={details.netContents.confidence}
+              overridden={overrides.netContents !== undefined}
+              effectiveMatch={effectiveVolumeMatch}
+              onOverride={() => toggleOverride('netContents', details.netContents.match)}
+              showOverrideButton={showOverrideMode}
             />
 
             {/* Government Warning */}
-            <div className="flex items-start gap-3 p-4 border rounded-lg">
+            <div className={`flex items-start gap-3 p-4 border-2 rounded-lg ${overrides.governmentWarning !== undefined ? 'border-warning bg-orange-50' : 'border-gray-200'}`}>
               <div className="flex-shrink-0 mt-0.5">
-                {details.governmentWarning.present ? (
+                {effectiveWarningMatch ? (
                   <svg className="w-5 h-5 text-success" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
@@ -292,15 +404,20 @@ export default function VerificationResults({ result, onReset }: VerificationRes
               <div className="flex-grow">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-gray-900">Government Warning</span>
-                  <span className={`text-sm font-semibold ${details.governmentWarning.present ? 'text-success' : 'text-error'}`}>
-                    {details.governmentWarning.present ? 'Present' : 'Missing'}
+                  <span className={`text-sm font-semibold ${effectiveWarningMatch ? 'text-success' : 'text-error'}`}>
+                    {effectiveWarningMatch ? 'Present' : 'Missing'}
                   </span>
-                  {details.governmentWarning.exact && (
+                  {overrides.governmentWarning !== undefined && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                      👤 Manually Overridden
+                    </span>
+                  )}
+                  {overrides.governmentWarning === undefined && details.governmentWarning.exact && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                       ✓ TTB-Compliant
                     </span>
                   )}
-                  {details.governmentWarning.confidence !== undefined && (
+                  {overrides.governmentWarning === undefined && details.governmentWarning.confidence !== undefined && (
                     <span className={`text-xs px-2 py-0.5 rounded ${
                       details.governmentWarning.confidence >= 90 ? 'bg-green-100 text-green-800' :
                       details.governmentWarning.confidence >= 70 ? 'bg-yellow-100 text-yellow-800' :
@@ -324,6 +441,26 @@ export default function VerificationResults({ result, onReset }: VerificationRes
                         <li key={idx}>{phrase}</li>
                       ))}
                     </ul>
+                  </div>
+                )}
+                
+                {/* Override button for warning */}
+                {showOverrideMode && (
+                  <div className="mt-3">
+                    <button
+                      onClick={() => toggleOverride('governmentWarning', details.governmentWarning.present)}
+                      className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+                        overrides.governmentWarning !== undefined
+                          ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          : 'bg-warning text-white hover:bg-warning-dark'
+                      }`}
+                    >
+                      {overrides.governmentWarning !== undefined 
+                        ? '↩ Remove Override' 
+                        : effectiveWarningMatch 
+                          ? '✗ Mark as Incorrect' 
+                          : '✓ Override - Mark as Correct'}
+                    </button>
                   </div>
                 )}
               </div>
@@ -360,13 +497,19 @@ interface ResultItemProps {
   expected: string;
   found: string | null;
   confidence?: number;
+  overridden?: boolean;
+  effectiveMatch?: boolean;
+  onOverride?: () => void;
+  showOverrideButton?: boolean;
 }
 
-function ResultItem({ label, match, expected, found, confidence }: ResultItemProps) {
+function ResultItem({ label, match, expected, found, confidence, overridden, effectiveMatch, onOverride, showOverrideButton }: ResultItemProps) {
+  const displayMatch = effectiveMatch !== undefined ? effectiveMatch : match;
+  
   return (
-    <div className="flex items-start gap-3 p-4 border rounded-lg">
+    <div className={`flex items-start gap-3 p-4 border-2 rounded-lg ${overridden ? 'border-warning bg-orange-50' : 'border-gray-200'}`}>
       <div className="flex-shrink-0 mt-0.5">
-        {match ? (
+        {displayMatch ? (
           <svg className="w-5 h-5 text-success" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
@@ -379,10 +522,15 @@ function ResultItem({ label, match, expected, found, confidence }: ResultItemPro
       <div className="flex-grow">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-gray-900">{label}</span>
-          <span className={`text-sm font-semibold ${match ? 'text-success' : 'text-error'}`}>
-            {match ? 'Match' : 'Mismatch'}
+          <span className={`text-sm font-semibold ${displayMatch ? 'text-success' : 'text-error'}`}>
+            {displayMatch ? 'Match' : 'Mismatch'}
           </span>
-          {confidence !== undefined && (
+          {overridden && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+              👤 Manually Overridden
+            </span>
+          )}
+          {!overridden && confidence !== undefined && (
             <span className={`text-xs px-2 py-0.5 rounded ${
               confidence >= 90 ? 'bg-green-100 text-green-800' :
               confidence >= 70 ? 'bg-yellow-100 text-yellow-800' :
@@ -404,6 +552,22 @@ function ResultItem({ label, match, expected, found, confidence }: ResultItemPro
             </span>
           </div>
         </div>
+        
+        {/* Override button */}
+        {showOverrideButton && onOverride && (
+          <div className="mt-3">
+            <button
+              onClick={onOverride}
+              className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+                overridden
+                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  : 'bg-warning text-white hover:bg-warning-dark'
+              }`}
+            >
+              {overridden ? '↩ Remove Override' : displayMatch ? '✗ Mark as Incorrect' : '✓ Override - Mark as Correct'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
