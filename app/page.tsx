@@ -2,15 +2,36 @@
 
 import { useState } from 'react';
 import LabelForm from '@/components/LabelForm';
+import ImageUpload from '@/components/ImageUpload';
 import VerificationResults from '@/components/VerificationResults';
 import { LabelFormData, VerificationResult } from '@/types';
 
 export default function Home() {
+  const [imageBase64, setImageBase64] = useState<string>('');
+  const [analyzedData, setAnalyzedData] = useState<Partial<LabelFormData> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
-  const handleSubmit = async (formData: LabelFormData, imageBase64: string) => {
+  const handleImageSelect = (base64: string) => {
+    setImageBase64(base64);
+    setShowForm(false);
+    setAnalyzedData(null);
+    setResult(null);
+    setError(null);
+  };
+
+  const handleImageAnalyzed = (data: Partial<LabelFormData>) => {
+    setAnalyzedData(data);
+    setShowForm(true);
+    // Scroll to form
+    setTimeout(() => {
+      document.getElementById('form-section')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleSubmit = async (formData: LabelFormData, imageBase64Param: string) => {
     setIsLoading(true);
     setError(null);
     setResult(null);
@@ -23,7 +44,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           formData,
-          imageBase64,
+          imageBase64: imageBase64Param,
         }),
       });
 
@@ -52,6 +73,9 @@ export default function Home() {
   const handleReset = () => {
     setResult(null);
     setError(null);
+    setImageBase64('');
+    setAnalyzedData(null);
+    setShowForm(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -63,29 +87,78 @@ export default function Home() {
           Welcome to TTB Label Verification
         </h2>
         <p className="text-gray-600 mb-4">
-          This application simulates the Alcohol and Tobacco Tax and Trade Bureau (TTB) label 
-          approval process. Upload an image of your alcohol beverage label along with the product 
-          information, and our AI will verify if the label matches the submitted data.
+          Start by capturing or uploading a photo of your alcohol beverage label. 
+          Our AI will automatically analyze it and pre-fill the form for you to review.
         </p>
         <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
           <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
-            What We Check:
+            How it works:
           </h3>
-          <ul className="text-sm text-blue-900 space-y-1 ml-7">
-            <li>✓ Brand name matches the label</li>
-            <li>✓ Product type/class is correct</li>
-            <li>✓ Alcohol content (ABV) matches</li>
-            <li>✓ Net contents/volume matches</li>
-            <li>✓ Government warning statement is present</li>
-          </ul>
+          <ol className="text-sm text-blue-900 space-y-1 ml-7 list-decimal">
+            <li>📸 Capture or upload a photo of your label</li>
+            <li>🤖 AI analyzes and extracts information</li>
+            <li>📝 Review and edit the pre-filled form</li>
+            <li>✅ Submit for compliance verification</li>
+          </ol>
         </div>
       </div>
 
-      {/* Form */}
-      <LabelForm onSubmit={handleSubmit} isLoading={isLoading} />
+      {/* Step 1: Image Upload/Capture */}
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+        <div className="mb-4">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <span className="flex items-center justify-center w-8 h-8 bg-primary text-white rounded-full text-sm font-bold">1</span>
+            Capture or Upload Label Image
+          </h3>
+          <p className="text-sm text-gray-600 mt-1 ml-10">
+            Use your device camera or upload an existing photo
+          </p>
+        </div>
+        <ImageUpload 
+          onImageSelect={handleImageSelect}
+          onImageAnalyzed={handleImageAnalyzed}
+          disabled={isLoading}
+          autoAnalyze={true}
+        />
+      </div>
+
+      {/* Step 2: Review and Edit Form */}
+      {showForm && analyzedData && (
+        <div id="form-section" className="animate-fade-in">
+          <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-6">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <span className="flex items-center justify-center w-8 h-8 bg-primary text-white rounded-full text-sm font-bold">2</span>
+                Review Detected Information
+              </h3>
+              <p className="text-sm text-gray-600 mt-1 ml-10">
+                AI has pre-filled the form below. Please review and edit if needed.
+              </p>
+            </div>
+            <div className="ml-10 bg-green-50 border border-green-200 rounded-md p-4">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <div className="text-sm text-green-900">
+                  <p className="font-semibold mb-1">Image analyzed successfully!</p>
+                  <p>We detected the following information. Please verify accuracy before submitting.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <LabelForm 
+            onSubmit={handleSubmit}
+            isLoading={isLoading}
+            initialValues={analyzedData}
+            imageBase64={imageBase64}
+          />
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && (
@@ -97,15 +170,15 @@ export default function Home() {
             </svg>
             <div className="text-center">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Processing Your Label...
+                Verifying Label Compliance...
               </h3>
               <div className="space-y-1 text-sm text-gray-600">
-                <p>📤 Uploading image...</p>
-                <p>🔍 Analyzing label with AI...</p>
-                <p>✅ Verifying information...</p>
+                <p>🔍 Comparing form data with label image...</p>
+                <p>✅ Checking compliance requirements...</p>
+                <p>📊 Generating verification report...</p>
               </div>
               <p className="mt-4 text-xs text-gray-500">
-                This may take 5-15 seconds depending on image size
+                This may take 5-15 seconds
               </p>
             </div>
           </div>
@@ -130,7 +203,7 @@ export default function Home() {
                 onClick={handleReset}
                 className="mt-4 px-4 py-2 bg-error text-white rounded-md hover:bg-error-dark transition-colors text-sm font-medium"
               >
-                Try Again
+                Start Over
               </button>
             </div>
           </div>
@@ -144,4 +217,3 @@ export default function Home() {
     </div>
   );
 }
-

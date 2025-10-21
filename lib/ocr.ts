@@ -24,6 +24,8 @@ export async function extractTextFromImage(imageBase64: string): Promise<OCRResu
       : `data:image/jpeg;base64,${imageBase64}`;
 
     // Call OpenAI Vision API with structured extraction prompt
+    // Note: gpt-4o is the latest and most advanced vision model available
+    // (GPT-5 is not yet released; gpt-4o is the current state-of-the-art)
     const response = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-4o',
       messages: [

@@ -4,14 +4,18 @@ import { useState, useRef, DragEvent, ChangeEvent } from 'react';
 
 interface ImageUploadProps {
   onImageSelect: (base64: string) => void;
+  onImageAnalyzed?: (data: { brandName: string; productType: string; alcoholContent: string; netContents: string }) => void;
   disabled?: boolean;
+  autoAnalyze?: boolean; // If true, automatically analyze image after upload
 }
 
-export default function ImageUpload({ onImageSelect, disabled = false }: ImageUploadProps) {
+export default function ImageUpload({ onImageSelect, onImageAnalyzed, disabled = false, autoAnalyze = false }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): boolean => {
     setError(null);
@@ -33,6 +37,40 @@ export default function ImageUpload({ onImageSelect, disabled = false }: ImageUp
     return true;
   };
 
+  const analyzeImage = async (base64String: string) => {
+    if (!autoAnalyze || !onImageAnalyzed) return;
+
+    setIsAnalyzing(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64String }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to analyze image');
+      }
+
+      if (data.result) {
+        onImageAnalyzed({
+          brandName: data.result.brandName || '',
+          productType: data.result.productType || '',
+          alcoholContent: data.result.alcoholContent || '',
+          netContents: data.result.netContents || '',
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to analyze image');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleFile = (file: File) => {
     if (!validateFile(file)) {
       return;
@@ -44,6 +82,11 @@ export default function ImageUpload({ onImageSelect, disabled = false }: ImageUp
       const base64String = reader.result as string;
       setPreview(base64String);
       onImageSelect(base64String);
+      
+      // Auto-analyze if enabled
+      if (autoAnalyze) {
+        analyzeImage(base64String);
+      }
     };
     reader.onerror = () => {
       setError('Failed to read image file. Please try again.');
@@ -91,12 +134,22 @@ export default function ImageUpload({ onImageSelect, disabled = false }: ImageUp
     }
   };
 
+  const handleCameraClick = () => {
+    if (!disabled) {
+      cameraInputRef.current?.click();
+    }
+  };
+
   const handleClear = () => {
     setPreview(null);
     setError(null);
+    setIsAnalyzing(false);
     onImageSelect('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
     }
   };
 
@@ -107,29 +160,64 @@ export default function ImageUpload({ onImageSelect, disabled = false }: ImageUp
       </label>
 
       {!preview ? (
-        <div
-          onClick={handleClick}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`
-            relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-            transition-colors duration-200
-            ${isDragging 
-              ? 'border-primary bg-blue-50' 
-              : 'border-gray-300 hover:border-primary hover:bg-gray-50'
-            }
-            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-          `}
-        >
+        <div className="space-y-3">
+          {/* Camera Capture Button (Mobile Priority) */}
+          <button
+            type="button"
+            onClick={handleCameraClick}
+            disabled={disabled || isAnalyzing}
+            className="w-full py-4 px-6 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Take Photo with Camera
+          </button>
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
             type="file"
-            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+            accept="image/*"
+            capture="environment"
             onChange={handleFileInput}
-            disabled={disabled}
+            disabled={disabled || isAnalyzing}
             className="hidden"
           />
+
+          {/* Or Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">or</span>
+            </div>
+          </div>
+
+          {/* Drag & Drop / Upload Area */}
+          <div
+            onClick={handleClick}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`
+              relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
+              transition-colors duration-200
+              ${isDragging 
+                ? 'border-primary bg-blue-50' 
+                : 'border-gray-300 hover:border-primary hover:bg-gray-50'
+              }
+              ${disabled || isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''}
+            `}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={handleFileInput}
+              disabled={disabled || isAnalyzing}
+              className="hidden"
+            />
           
           <svg
             className="mx-auto h-12 w-12 text-gray-400 mb-3"
@@ -153,6 +241,7 @@ export default function ImageUpload({ onImageSelect, disabled = false }: ImageUp
             JPEG, PNG, GIF, or WebP (max 10MB)
           </p>
         </div>
+        </div>
       ) : (
         <div className="relative border-2 border-gray-300 rounded-lg p-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -161,11 +250,23 @@ export default function ImageUpload({ onImageSelect, disabled = false }: ImageUp
             alt="Label preview"
             className="max-h-64 mx-auto rounded"
           />
+          
+          {/* Analyzing State */}
+          {isAnalyzing && (
+            <div className="mt-4 flex items-center justify-center gap-2 text-primary">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span className="text-sm font-medium">Analyzing label with AI...</span>
+            </div>
+          )}
+
           <div className="mt-3 flex justify-center gap-2">
             <button
               type="button"
               onClick={handleClear}
-              disabled={disabled}
+              disabled={disabled || isAnalyzing}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Clear
@@ -173,7 +274,7 @@ export default function ImageUpload({ onImageSelect, disabled = false }: ImageUp
             <button
               type="button"
               onClick={handleClick}
-              disabled={disabled}
+              disabled={disabled || isAnalyzing}
               className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Replace
