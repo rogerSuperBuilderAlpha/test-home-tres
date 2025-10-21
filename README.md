@@ -4,49 +4,97 @@ An AI-powered web application that simulates the Alcohol and Tobacco Tax and Tra
 
 ## 🎯 Overview
 
-This application allows users to:
-- Submit product information via a web form (brand name, product type, alcohol content, net contents)
-- Upload an image of an alcohol label
-- Automatically verify if the label matches the form data using AI-powered OCR
-- Receive detailed results showing what matched, what didn't, and any missing information
+This application offers **two verification modes**:
+
+### **Single Mode** (Individual verification)
+- Fill out product information via web form or scan TTB application form
+- Upload label image or use camera on mobile devices
+- AI verifies if the label matches the form data using GPT-4o Vision
+- Receive detailed results with confidence scores
+- Manual override capability for human review
+- Download professional PDF report
+
+### **Bulk Mode** (Enterprise batch processing)
+- Upload CSV with up to 100 product forms
+- Upload up to 100 label images
+- AI intelligently matches forms to labels by brand name
+- Batch verifies all pairs simultaneously
+- View results dashboard with statistics
+- Export complete results to CSV
+
+## 🌟 Highlights
+
+**What makes this app special:**
+- 🤖 **GPT-4o Vision** - Latest AI model for superior OCR accuracy
+- 📦 **Bulk Processing** - Verify 100 labels at once (enterprise feature)
+- 👤 **Manual Override** - Human review when AI needs help
+- 📊 **Confidence Scores** - See AI certainty (0-100%) for every check
+- 📸 **Mobile Camera** - Instant capture on phones (auto-detected)
+- 🔍 **Form Scanning** - Auto-fill from application form photos
+- ✅ **TTB Compliance** - Exact government warning verification
+- 📄 **Professional Reports** - PDF and CSV export
 
 ## ✨ Features
 
 ### Core Features
-- **Interactive Form**: Clean, user-friendly form for entering product information
-- **Image Upload**: Support for JPEG, PNG, and other common image formats
-- **AI-Powered OCR**: Extracts text from label images using OpenAI Vision API
-- **Smart Verification**: Compares extracted text with form inputs
-- **Detailed Results**: Clear success/failure messages with specific discrepancies
-- **Error Handling**: Graceful handling of unreadable images, missing fields, etc.
+- **Dual-Mode Interface**: Single verification or bulk processing (up to 100 labels)
+- **Smart Form**: Category selector (Spirits/Wine/Beer) with dynamic fields
+- **Product Type Dropdown**: 40+ common types OR custom input
+- **Form Scanning**: Auto-fill from TTB application form photo
+- **Triple Upload Options**: Drag-drop, camera capture (mobile), or file browser
+- **AI-Powered OCR**: GPT-4o Vision API for superior accuracy
+- **Intelligent Verification**: Advanced fuzzy matching with Levenshtein distance
+- **Confidence Scores**: 0-100% transparency for every check
+- **Manual Override**: Human review and approval system
+- **Professional Reports**: PDF download for single, CSV export for bulk
+- **Advanced Loading**: Multi-step progress with countdown timer
 
 ### Verification Checks
-- ✅ Brand Name matching
-- ✅ Product Class/Type matching
-- ✅ Alcohol Content (ABV) matching
-- ✅ Net Contents (volume) matching
-- ✅ Government Warning Statement detection
+- ✅ Brand Name matching (with fuzzy matching)
+- ✅ Product Class/Type matching (tolerates variations)
+- ✅ Alcohol Content (ABV) matching (±0.1% tolerance)
+- ✅ Net Contents (volume) matching (unit normalization)
+- ✅ Government Warning Statement (exact TTB compliance check)
 
-### Bonus Features
-- Fuzzy matching for text variations (case-insensitive, whitespace tolerant)
-- Visual feedback with success/error states
-- Responsive design for mobile and desktop
-- Comprehensive error messages
+### Bonus Features (From Requirements)
+- ✅ **Exact Government Warning Verification** - Word-for-word TTB compliance (27 CFR 16.21)
+- ✅ **Enhanced Fuzzy Matching** - Levenshtein distance algorithm handles OCR errors
+- ✅ **Confidence Scores** - 0-100% for all checks with color-coded badges
+- ✅ **Multiple Product Types** - Spirits/Wine/Beer with dynamic fields
+- ✅ **Polish & UX** - Advanced loading indicators, animations, professional design
+- ⚠️ **Automated Tests** - Comprehensive manual tests (automated tests documented for future)
+
+### Creative Additions (Beyond Requirements)
+- 🚀 **Bulk Upload** - Process up to 100 labels with intelligent form-to-label matching
+- 📸 **Camera Capture** - Mobile-only photo button for instant capture
+- 🔍 **Form Scanning** - Auto-fill form fields from TTB application photo
+- 📄 **PDF Export** - Professional downloadable verification reports
+- 📊 **CSV Export** - Batch results export for record-keeping
+- 👤 **Manual Override** - Human review and approval for edge cases
+- 📱 **Mobile Detection** - Smart UX that adapts to device capabilities
 
 ## 🛠 Tech Stack
 
 ### Frontend
 - **Next.js 14** - React framework with App Router
-- **TypeScript** - Type safety and better DX
-- **Tailwind CSS** - Utility-first styling
-- **React Hook Form** - Form state management
+- **TypeScript 5** - Full type safety and strict mode
+- **Tailwind CSS** - Utility-first styling with custom theme
+- **React 18** - Modern React with hooks
+- **jsPDF** - PDF report generation
 
 ### Backend
-- **Next.js API Routes** - Serverless functions
-- **OpenAI Vision API** - High-accuracy OCR and image analysis
+- **Next.js API Routes** - Serverless functions (3 endpoints)
+- **OpenAI Vision API** - GPT-4o model for high-accuracy OCR
+- **Custom Algorithms** - Levenshtein distance for fuzzy matching
+
+### Key Libraries
+- **OpenAI SDK** - AI/ML integration
+- **jsPDF** - PDF generation
+- **Custom Hooks** - Mobile detection, state management
 
 ### Deployment
-- **Vercel** - Optimized for Next.js applications
+- **Vercel** - Production hosting with auto-deployments
+- **GitHub** - Version control with CI/CD
 
 ## 📋 Prerequisites
 
@@ -78,7 +126,7 @@ pnpm install
 Create a `.env.local` file in the root directory:
 
 ```bash
-cp .env.example .env.local
+cp env.template .env.local
 ```
 
 Add your OpenAI API key:
@@ -108,38 +156,57 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 🧪 Testing the Application
 
-### Manual Testing Scenarios
+### Quick Test (Single Mode)
 
-1. **Perfect Match Test**
-   - Fill out form with: Brand="Old Tom Distillery", Type="Kentucky Straight Bourbon Whiskey", ABV="45", Volume="750 mL"
-   - Upload a label image containing all this information
-   - Expected: All checks pass ✅
+1. **Use the Test Label Generator**
+   - Visit http://localhost:3000/test-label-generator.html
+   - Save the generated label image
+   - Return to main app at http://localhost:3000
 
-2. **Mismatch Test**
-   - Fill out form with different information than what's on the label
-   - Expected: Specific discrepancies reported ❌
+2. **Fill Out Form**
+   - Select category: "Distilled Spirits"
+   - Product type: "Kentucky Straight Bourbon Whiskey" (or use dropdown)
+   - Brand: "Old Tom Distillery"
+   - ABV: "45"
+   - Volume: "750 mL"
+   - Upload the saved label image
 
-3. **Missing Field Test**
-   - Upload a label that's missing the government warning
-   - Expected: Warning about missing government warning text
+3. **Verify**
+   - Click "Verify Label"
+   - Should see all green checkmarks with 100% confidence ✅
+   - Try "Download PDF Report"
 
-4. **Unreadable Image Test**
-   - Upload a blurry or low-quality image
-   - Expected: Error message asking for clearer image
+4. **Test Override Feature**
+   - Change ABV to "40" (intentional mismatch)
+   - Submit again
+   - Click "Manual Review" button
+   - Override the ABV field
+   - Watch result update to PASSED with override notation
 
-### Sample Test Images
+### Quick Test (Bulk Mode)
 
-You can create test images using:
-- AI image generators (DALL-E, Midjourney, etc.)
-- Graphic design tools (Canva, Figma, Photoshop)
-- Simple text overlays on stock images
+1. **Download Sample CSV**
+   - Click "Bulk Upload" tab
+   - Download the sample CSV template
+   
+2. **Upload Files**
+   - Upload the CSV
+   - Upload 3-5 label images
+   - Click "Verify X Labels"
 
-Example labels should include:
-- Brand name prominently displayed
-- Product type/class
-- Alcohol percentage (e.g., "45% ABV" or "45% Alc./Vol.")
-- Volume (e.g., "750 mL" or "12 fl oz")
-- Government warning text (small text at bottom)
+3. **View Results**
+   - Check dashboard statistics
+   - Export results to CSV
+
+### Additional Features to Test
+
+- **Form Scanning**: Click "Scan Form" button and upload a form image
+- **Camera Capture**: On mobile, use "Take Photo with Camera"
+- **Product Type Dropdown**: Try selecting from dropdown or custom input
+- **Confidence Scores**: Check colored badges on all results
+- **Manual Override**: Test overriding AI decisions
+
+**For comprehensive testing guide with 12 detailed scenarios, see [docs/TESTING.md](docs/TESTING.md)**
 
 ## 📦 Deployment
 
