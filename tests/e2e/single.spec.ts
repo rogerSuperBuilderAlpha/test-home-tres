@@ -26,6 +26,17 @@ test.beforeEach(async ({ page }) => {
     }
     return route.continue();
   });
+  await page.route('**/api/scan-form', async route => {
+    const request = route.request();
+    if (request.method() === 'POST') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ result: { brandName: '', productType: '', alcoholContent: '', netContents: '' } }),
+      });
+    }
+    return route.continue();
+  });
 });
 
 test('single verification happy path', async ({ page }) => {
@@ -42,11 +53,14 @@ test('single verification happy path', async ({ page }) => {
 
   // Upload a tiny image via setInputFiles
   const imageBuffer = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==', 'base64');
-  await page.locator('input[type="file"][accept*="image"]').first().setInputFiles({
+  const imageInput = page.locator('input[type="file"][accept*="image"]');
+  await imageInput.first().setInputFiles({
     name: 'tiny.png',
     mimeType: 'image/png',
     buffer: imageBuffer,
   });
+
+  await expect(page.getByRole('button', { name: 'Verify Label' })).toBeEnabled({ timeout: 10000 });
 
   await page.getByRole('button', { name: 'Verify Label' }).click();
 

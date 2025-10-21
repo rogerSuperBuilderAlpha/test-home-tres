@@ -33,6 +33,17 @@ test.beforeEach(async ({ page }) => {
     }
     return route.continue();
   });
+  await page.route('**/api/scan-form', async route => {
+    const request = route.request();
+    if (request.method() === 'POST') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ result: { brandName: '', productType: '', alcoholContent: '', netContents: '' } }),
+      });
+    }
+    return route.continue();
+  });
 });
 
 test('bulk verification basic flow', async ({ page }) => {
@@ -52,7 +63,9 @@ test('bulk verification basic flow', async ({ page }) => {
 
   // Upload an image via setInputFiles
   const imageBuffer = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==', 'base64');
-  await page.locator('input[type="file"][accept*="image"]').nth(1).setInputFiles({
+  const imageInputs = page.locator('input[type="file"][accept*="image"]');
+  await imageInputs.nth(1).waitFor({ state: 'attached' });
+  await imageInputs.nth(1).setInputFiles({
     name: 'old_tom.png',
     mimeType: 'image/png',
     buffer: imageBuffer,
