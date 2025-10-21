@@ -1,7 +1,7 @@
 /**
  * Beverage category types
  */
-export type BeverageCategory = 'spirits' | 'wine' | 'beer' | 'malt-beverages';
+export type BeverageCategory = 'spirits' | 'wine' | 'beer';
 
 /**
  * Form data submitted by the user

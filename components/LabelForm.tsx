@@ -137,7 +137,6 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
   const getProductTypeOptions = (): string[] => {
     switch (formData.beverageCategory) {
       case 'beer':
-      case 'malt-beverages':
         return [
           'IPA (India Pale Ale)',
           'Pale Ale',
@@ -151,6 +150,8 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
           'Sour Beer',
           'Belgian Ale',
           'Malt Liquor',
+          'Session Ale',
+          'Double/Imperial IPA',
         ];
       case 'wine':
         return [
@@ -194,7 +195,6 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
   const getProductTypeLabel = () => {
     switch (formData.beverageCategory) {
       case 'beer':
-      case 'malt-beverages':
         return 'Beer Style';
       case 'wine':
         return 'Wine Type/Varietal';
@@ -207,7 +207,6 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
   const getProductTypePlaceholder = () => {
     switch (formData.beverageCategory) {
       case 'beer':
-      case 'malt-beverages':
         return 'e.g., IPA, Stout, Lager';
       case 'wine':
         return 'e.g., Cabernet Sauvignon, Chardonnay';
@@ -279,8 +278,7 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
             >
               <option value="spirits">Distilled Spirits</option>
               <option value="wine">Wine</option>
-              <option value="beer">Beer</option>
-              <option value="malt-beverages">Malt Beverages</option>
+              <option value="beer">Beer & Malt Beverages</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
               Select the type of alcoholic beverage
@@ -388,7 +386,7 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
               <p className="mt-1 text-sm text-error">{errors.productType}</p>
             )}
             <p className="mt-1 text-xs text-gray-500">
-              {formData.beverageCategory === 'beer' || formData.beverageCategory === 'malt-beverages'
+              {formData.beverageCategory === 'beer'
                 ? 'Select from common beer styles or enter your own'
                 : formData.beverageCategory === 'wine'
                 ? 'Select from common wine types or enter your own'
