@@ -133,6 +133,63 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
   const isFormValid = formData.brandName && formData.productType && 
                      formData.alcoholContent && formData.netContents && imageBase64;
 
+  // Product type options by category
+  const getProductTypeOptions = (): string[] => {
+    switch (formData.beverageCategory) {
+      case 'beer':
+      case 'malt-beverages':
+        return [
+          'IPA (India Pale Ale)',
+          'Pale Ale',
+          'Lager',
+          'Pilsner',
+          'Stout',
+          'Porter',
+          'Wheat Beer',
+          'Amber Ale',
+          'Brown Ale',
+          'Sour Beer',
+          'Belgian Ale',
+          'Malt Liquor',
+        ];
+      case 'wine':
+        return [
+          'Cabernet Sauvignon',
+          'Merlot',
+          'Pinot Noir',
+          'Chardonnay',
+          'Sauvignon Blanc',
+          'Riesling',
+          'Pinot Grigio',
+          'Zinfandel',
+          'Syrah/Shiraz',
+          'Malbec',
+          'Champagne/Sparkling Wine',
+          'Rosé',
+          'Dessert Wine',
+          'Table Wine',
+        ];
+      case 'spirits':
+      default:
+        return [
+          'Bourbon Whiskey',
+          'Kentucky Straight Bourbon Whiskey',
+          'Tennessee Whiskey',
+          'Rye Whiskey',
+          'Scotch Whisky',
+          'Irish Whiskey',
+          'Vodka',
+          'Gin',
+          'Rum',
+          'Tequila',
+          'Brandy',
+          'Cognac',
+          'Liqueur',
+          'Moonshine/Unaged Whiskey',
+        ];
+    }
+  };
+
   // Get field labels based on category
   const getProductTypeLabel = () => {
     switch (formData.beverageCategory) {
@@ -159,6 +216,8 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
         return 'e.g., Kentucky Straight Bourbon Whiskey, Vodka';
     }
   };
+
+  const [showCustomProductType, setShowCustomProductType] = useState(false);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -259,28 +318,81 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
             <label htmlFor="productType" className="block text-sm font-medium text-gray-700 mb-1">
               {getProductTypeLabel()} <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              id="productType"
-              value={formData.productType}
-              onChange={(e) => handleInputChange('productType', e.target.value)}
-              disabled={isLoading}
-              placeholder={getProductTypePlaceholder()}
-              className={`
-                w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-primary
-                disabled:bg-gray-100 disabled:cursor-not-allowed
-                ${errors.productType ? 'border-error' : 'border-gray-300'}
-              `}
-            />
+            
+            {!showCustomProductType ? (
+              <div className="space-y-2">
+                <select
+                  id="productType"
+                  value={formData.productType}
+                  onChange={(e) => {
+                    if (e.target.value === '__custom__') {
+                      setShowCustomProductType(true);
+                      handleInputChange('productType', '');
+                    } else {
+                      handleInputChange('productType', e.target.value);
+                    }
+                  }}
+                  disabled={isLoading}
+                  className={`
+                    w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-primary
+                    disabled:bg-gray-100 disabled:cursor-not-allowed
+                    ${errors.productType ? 'border-error' : 'border-gray-300'}
+                  `}
+                >
+                  <option value="">-- Select {getProductTypeLabel()} --</option>
+                  {getProductTypeOptions().map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                  <option value="__custom__" className="font-semibold">
+                    ✏️ Custom (Enter Your Own)
+                  </option>
+                </select>
+                {formData.productType && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomProductType(true)}
+                    className="text-xs text-primary hover:text-primary-dark font-medium"
+                  >
+                    Switch to custom input →
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  id="productTypeCustom"
+                  value={formData.productType}
+                  onChange={(e) => handleInputChange('productType', e.target.value)}
+                  disabled={isLoading}
+                  placeholder={getProductTypePlaceholder()}
+                  className={`
+                    w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-primary
+                    disabled:bg-gray-100 disabled:cursor-not-allowed
+                    ${errors.productType ? 'border-error' : 'border-gray-300'}
+                  `}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCustomProductType(false)}
+                  className="text-xs text-primary hover:text-primary-dark font-medium"
+                >
+                  ← Back to dropdown selection
+                </button>
+              </div>
+            )}
+            
             {errors.productType && (
               <p className="mt-1 text-sm text-error">{errors.productType}</p>
             )}
             <p className="mt-1 text-xs text-gray-500">
               {formData.beverageCategory === 'beer' || formData.beverageCategory === 'malt-beverages'
-                ? 'The style of beer (e.g., IPA, Stout, Lager)'
+                ? 'Select from common beer styles or enter your own'
                 : formData.beverageCategory === 'wine'
-                ? 'The type or varietal of wine (e.g., Cabernet Sauvignon, Chardonnay)'
-                : 'The class/type designation (e.g., Bourbon, Vodka, Rum)'}
+                ? 'Select from common wine types or enter your own'
+                : 'Select from common spirit types or enter your own'}
             </p>
           </div>
 
