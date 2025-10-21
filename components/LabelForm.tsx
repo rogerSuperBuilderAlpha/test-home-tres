@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useRef } from 'react';
 import { LabelFormData, BeverageCategory } from '@/types';
 import ImageUpload from './ImageUpload';
 
@@ -22,6 +22,9 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
   
   const [imageBase64, setImageBase64] = useState<string>('');
   const [errors, setErrors] = useState<Partial<Record<keyof LabelFormData | 'image', string>>>({});
+  const [showFormScanner, setShowFormScanner] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const formScanInputRef = useRef<HTMLInputElement>(null);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof LabelFormData | 'image', string>> = {};
@@ -83,6 +86,52 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
     }
   };
 
+  const handleFormScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        
+        // Call API to scan form
+        const response = await fetch('/api/scan-form', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64String }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to scan form');
+        }
+
+        if (data.result) {
+          // Auto-fill form fields
+          setFormData(prev => ({
+            ...prev,
+            brandName: data.result.brandName || prev.brandName,
+            productType: data.result.productType || prev.productType,
+            alcoholContent: data.result.alcoholContent || prev.alcoholContent,
+            netContents: data.result.netContents || prev.netContents,
+          }));
+          setShowFormScanner(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Form scan error:', err);
+      alert(err instanceof Error ? err.message : 'Failed to scan form');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   const isFormValid = formData.brandName && formData.productType && 
                      formData.alcoholContent && formData.netContents && imageBase64;
 
@@ -116,7 +165,47 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Product Information</h2>
+        <div className="flex items-start justify-between mb-6 gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Product Information</h2>
+            <p className="text-xs text-gray-500 mt-1">Fill out manually or use the scan button →</p>
+          </div>
+          
+          {/* Small Scan Form Button */}
+          <div className="flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => formScanInputRef.current?.click()}
+              disabled={isLoading || isScanning}
+              title="Upload a photo of your TTB application form to auto-fill these fields"
+              className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+              </svg>
+              {isScanning ? 'Scanning...' : 'Scan Form'}
+            </button>
+            <input
+              ref={formScanInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFormScan}
+              disabled={isLoading || isScanning}
+              className="hidden"
+            />
+          </div>
+        </div>
+        
+        {/* Scanning indicator */}
+        {isScanning && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-3 flex items-center gap-2 text-sm text-blue-900">
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            Scanning your TTB application form... This will auto-fill the fields below.
+          </div>
+        )}
         
         <div className="space-y-5">
           {/* Beverage Category */}
