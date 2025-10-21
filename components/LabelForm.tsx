@@ -22,7 +22,6 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
   
   const [imageBase64, setImageBase64] = useState<string>('');
   const [errors, setErrors] = useState<Partial<Record<keyof LabelFormData | 'image', string>>>({});
-  const [showFormScanner, setShowFormScanner] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const formScanInputRef = useRef<HTMLInputElement>(null);
 
@@ -120,7 +119,6 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
             alcoholContent: data.result.alcoholContent || prev.alcoholContent,
             netContents: data.result.netContents || prev.netContents,
           }));
-          setShowFormScanner(false);
         }
       };
       reader.readAsDataURL(file);
