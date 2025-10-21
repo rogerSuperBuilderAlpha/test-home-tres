@@ -18,11 +18,17 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
     netContents: '',
     sulfites: '',
     style: '',
+    manufacturerName: '',
+    bottlerName: '',
+    bottlerAddress: '',
+    vintageYear: '',
+    ageStatement: '',
   });
   
   const [imageBase64, setImageBase64] = useState<string>('');
   const [errors, setErrors] = useState<Partial<Record<keyof LabelFormData | 'image', string>>>({});
   const [isScanning, setIsScanning] = useState(false);
+  const [showOptionalFields, setShowOptionalFields] = useState(false);
   const formScanInputRef = useRef<HTMLInputElement>(null);
 
   const validateForm = (): boolean => {
@@ -470,6 +476,132 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Optional Information Section */}
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+        <button
+          type="button"
+          onClick={() => setShowOptionalFields(!showOptionalFields)}
+          disabled={isLoading}
+          className="w-full flex items-center justify-between text-left group"
+        >
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-900">Optional Information</h3>
+            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">Not required</span>
+          </div>
+          <svg
+            className={`w-5 h-5 text-gray-400 transition-transform ${showOptionalFields ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        
+        {showOptionalFields && (
+          <div className="mt-6 space-y-5 pt-6 border-t border-gray-200">
+            {/* Manufacturer Name */}
+            <div>
+              <label htmlFor="manufacturerName" className="block text-sm font-medium text-gray-700 mb-1">
+                Manufacturer/Distiller Name
+              </label>
+              <input
+                type="text"
+                id="manufacturerName"
+                value={formData.manufacturerName || ''}
+                onChange={(e) => handleInputChange('manufacturerName', e.target.value)}
+                disabled={isLoading}
+                placeholder="e.g., Old Tom Distillery Company"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                The company that manufactured or distilled the product
+              </p>
+            </div>
+
+            {/* Bottler Name */}
+            <div>
+              <label htmlFor="bottlerName" className="block text-sm font-medium text-gray-700 mb-1">
+                Bottler Name
+              </label>
+              <input
+                type="text"
+                id="bottlerName"
+                value={formData.bottlerName || ''}
+                onChange={(e) => handleInputChange('bottlerName', e.target.value)}
+                disabled={isLoading}
+                placeholder="e.g., Bottled by Old Tom Distillery"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                The company that bottled the product (if different from manufacturer)
+              </p>
+            </div>
+
+            {/* Bottler Address */}
+            <div>
+              <label htmlFor="bottlerAddress" className="block text-sm font-medium text-gray-700 mb-1">
+                Bottler Address
+              </label>
+              <input
+                type="text"
+                id="bottlerAddress"
+                value={formData.bottlerAddress || ''}
+                onChange={(e) => handleInputChange('bottlerAddress', e.target.value)}
+                disabled={isLoading}
+                placeholder="e.g., Louisville, Kentucky"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                The address where the product was bottled
+              </p>
+            </div>
+
+            {/* Wine-specific: Vintage Year */}
+            {formData.beverageCategory === 'wine' && (
+              <div>
+                <label htmlFor="vintageYear" className="block text-sm font-medium text-gray-700 mb-1">
+                  Vintage Year
+                </label>
+                <input
+                  type="text"
+                  id="vintageYear"
+                  value={formData.vintageYear || ''}
+                  onChange={(e) => handleInputChange('vintageYear', e.target.value)}
+                  disabled={isLoading}
+                  placeholder="e.g., 2019"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  The year the grapes were harvested
+                </p>
+              </div>
+            )}
+
+            {/* Spirits-specific: Age Statement */}
+            {formData.beverageCategory === 'spirits' && (
+              <div>
+                <label htmlFor="ageStatement" className="block text-sm font-medium text-gray-700 mb-1">
+                  Age Statement
+                </label>
+                <input
+                  type="text"
+                  id="ageStatement"
+                  value={formData.ageStatement || ''}
+                  onChange={(e) => handleInputChange('ageStatement', e.target.value)}
+                  disabled={isLoading}
+                  placeholder="e.g., Aged 12 Years, 18 Year Old"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Age statement on the label (if applicable)
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Image Upload */}

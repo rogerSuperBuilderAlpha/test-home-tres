@@ -14,6 +14,12 @@ export interface LabelFormData {
   netContents: string; // e.g., "750 mL" or "12 fl oz"
   sulfites?: string; // Wine-specific: Contains sulfites declaration
   style?: string; // Beer-specific: Style (IPA, Stout, etc.)
+  // Optional fields
+  manufacturerName?: string; // Manufacturer/Distiller name
+  bottlerName?: string; // Bottler name if different from manufacturer
+  bottlerAddress?: string; // Bottler address
+  vintageYear?: string; // Wine-specific: Vintage year
+  ageStatement?: string; // Spirits-specific: Age statement (e.g., "Aged 12 Years")
 }
 
 /**

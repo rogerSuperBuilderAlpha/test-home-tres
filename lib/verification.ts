@@ -116,8 +116,8 @@ function verifyBrandName(
     confidence = calculateSimilarity(normalizedExpected, normalizedOCRBrand);
   }
 
-  // Match if confidence is above 70%
-  const match = confidence >= 70;
+  // Match if confidence is above a stricter threshold to avoid false positives
+  const match = confidence >= 85;
 
   return {
     match,
@@ -140,8 +140,11 @@ function verifyProductType(
 
   // Check for exact match
   const exactMatch = normalizedExpected === normalizedOCRType;
-  const partialMatch = normalizedOCRType.includes(normalizedExpected) || 
-                      normalizedExpected.includes(normalizedOCRType);
+  // Only consider partial matches when OCR extracted a non-empty type
+  const partialMatch = normalizedOCRType.length > 0 && (
+    normalizedOCRType.includes(normalizedExpected) ||
+    normalizedExpected.includes(normalizedOCRType)
+  );
   const matchInFullText = normalizedFullText.includes(normalizedExpected);
   
   // Calculate confidence

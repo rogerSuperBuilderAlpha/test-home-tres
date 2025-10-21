@@ -26,7 +26,7 @@ export default function RootLayout({
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
+                  <h1 data-testid="app-title" className="text-2xl font-bold text-gray-900">
                     TTB Label Verification
                   </h1>
                   <p className="text-sm text-gray-600">

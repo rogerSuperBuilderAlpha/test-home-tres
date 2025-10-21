@@ -156,6 +156,19 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 🧪 Testing the Application
 
+### Run Automated Tests
+
+```bash
+# Unit tests (Jest)
+npm run test:unit
+
+# End-to-end tests (Playwright)
+npm run test:e2e
+
+# Both
+npm test
+```
+
 ### Quick Test (Single Mode)
 
 1. **Use the Test Label Generator**
