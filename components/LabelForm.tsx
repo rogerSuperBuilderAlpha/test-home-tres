@@ -1,44 +1,24 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent } from 'react';
 import { LabelFormData } from '@/types';
+import ImageUpload from './ImageUpload';
 
 interface LabelFormProps {
   onSubmit: (formData: LabelFormData, imageBase64: string) => void;
   isLoading: boolean;
-  initialValues?: Partial<LabelFormData>;
-  imageBase64?: string;
 }
 
-export default function LabelForm({ onSubmit, isLoading, initialValues, imageBase64: initialImageBase64 }: LabelFormProps) {
+export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
   const [formData, setFormData] = useState<LabelFormData>({
-    brandName: initialValues?.brandName || '',
-    productType: initialValues?.productType || '',
-    alcoholContent: initialValues?.alcoholContent || '',
-    netContents: initialValues?.netContents || '',
+    brandName: '',
+    productType: '',
+    alcoholContent: '',
+    netContents: '',
   });
   
-  const [imageBase64, setImageBase64] = useState<string>(initialImageBase64 || '');
+  const [imageBase64, setImageBase64] = useState<string>('');
   const [errors, setErrors] = useState<Partial<Record<keyof LabelFormData | 'image', string>>>({});
-
-  // Update form when initial values change (from image analysis)
-  useEffect(() => {
-    if (initialValues) {
-      setFormData(prev => ({
-        brandName: initialValues.brandName || prev.brandName,
-        productType: initialValues.productType || prev.productType,
-        alcoholContent: initialValues.alcoholContent || prev.alcoholContent,
-        netContents: initialValues.netContents || prev.netContents,
-      }));
-    }
-  }, [initialValues]);
-
-  // Update image when initial image changes
-  useEffect(() => {
-    if (initialImageBase64) {
-      setImageBase64(initialImageBase64);
-    }
-  }, [initialImageBase64]);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof LabelFormData | 'image', string>> = {};
@@ -93,6 +73,12 @@ export default function LabelForm({ onSubmit, isLoading, initialValues, imageBas
     }
   };
 
+  const handleImageSelect = (base64: string) => {
+    setImageBase64(base64);
+    if (errors.image) {
+      setErrors(prev => ({ ...prev, image: undefined }));
+    }
+  };
 
   const isFormValid = formData.brandName && formData.productType && 
                      formData.alcoholContent && formData.netContents && imageBase64;
@@ -211,6 +197,17 @@ export default function LabelForm({ onSubmit, isLoading, initialValues, imageBas
         </div>
       </div>
 
+      {/* Image Upload */}
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+        <ImageUpload 
+          onImageSelect={handleImageSelect}
+          disabled={isLoading}
+        />
+        {errors.image && (
+          <p className="mt-2 text-sm text-error">{errors.image}</p>
+        )}
+      </div>
+
       {/* Submit Button */}
       <div className="flex justify-center">
         <button
@@ -240,4 +237,3 @@ export default function LabelForm({ onSubmit, isLoading, initialValues, imageBas
     </form>
   );
 }
-
