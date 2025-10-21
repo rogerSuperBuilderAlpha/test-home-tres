@@ -338,14 +338,15 @@ export default function LabelForm({ onSubmit, isLoading }: LabelFormProps) {
                   `}
                 >
                   <option value="">-- Select {getProductTypeLabel()} --</option>
+                  <option value="__custom__" className="font-semibold">
+                    ✏️ Custom (Enter Your Own)
+                  </option>
+                  <option disabled>──────────</option>
                   {getProductTypeOptions().map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
                   ))}
-                  <option value="__custom__" className="font-semibold">
-                    ✏️ Custom (Enter Your Own)
-                  </option>
                 </select>
                 {formData.productType && (
                   <button
