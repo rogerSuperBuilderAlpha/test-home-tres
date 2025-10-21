@@ -7,13 +7,13 @@ const config: PlaywrightTestConfig = {
   use: {
     headless: true,
     trace: 'retain-on-failure',
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3100',
   },
   webServer: {
-    command: 'npm run build && npm run start',
-    port: 3000,
+    command: 'bash -c "npm run build && npx next start -p 3100"',
+    port: 3100,
     timeout: 180_000,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
 };
 
