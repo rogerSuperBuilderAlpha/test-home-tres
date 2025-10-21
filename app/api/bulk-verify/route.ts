@@ -1,10 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
+import pLimit from 'p-limit';
 import { extractTextFromImage } from '@/lib/ocr';
 import { verifyLabel } from '@/lib/verification';
 import { LabelFormData } from '@/types';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes for batch processing
+
+// Concurrency limit to avoid overwhelming OpenAI API
+const limit = pLimit(5); // Process 5 labels concurrently
+
+/**
+ * Retry with exponential backoff
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const isRateLimit = error instanceof Error && 
+        (error.message.includes('rate limit') || error.message.includes('429'));
+      
+      if (attempt < maxRetries - 1 && isRateLimit) {
+        const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
 
 /**
  * Match forms to images intelligently by brand name
@@ -105,49 +135,59 @@ export async function POST(request: NextRequest) {
     // Match forms to images
     const matches = matchFormsToImages(forms, images);
 
-    // Process each match
-    const results = [];
-    
-    for (let i = 0; i < matches.length; i++) {
-      const match = matches[i];
-      
-      try {
-        // Extract text from image
-        const ocrResult = await extractTextFromImage(match.image.base64);
-        
-        // Verify against form data
-        const verificationResult = verifyLabel(match.form, ocrResult);
-        
-        results.push({
-          formIndex: i,
-          imageIndex: i,
-          brandName: match.form.brandName,
-          matchedBy: match.matchedBy,
-          result: verificationResult,
-        });
-      } catch (error) {
-        // If individual verification fails, record the error
-        results.push({
-          formIndex: i,
-          imageIndex: i,
-          brandName: match.form.brandName,
-          matchedBy: match.matchedBy,
-          result: {
-            success: false,
-            overallMatch: false,
-            details: {
-              brandName: { match: false, expected: match.form.brandName, found: null },
-              productType: { match: false, expected: match.form.productType, found: null },
-              alcoholContent: { match: false, expected: match.form.alcoholContent, found: null },
-              netContents: { match: false, expected: match.form.netContents, found: null },
-              governmentWarning: { present: false },
-            },
-            discrepancies: ['brandName', 'productType', 'alcoholContent', 'netContents', 'governmentWarning'],
-            error: error instanceof Error ? error.message : 'Failed to process image',
-          },
-        });
-      }
-    }
+    // Process each match with concurrency control and retry logic
+    const verificationPromises = matches.map((match, i) =>
+      limit(async () => {
+        try {
+          // Extract text with retry on rate limits
+          const ocrResult = await retryWithBackoff(() =>
+            extractTextFromImage(match.image.base64)
+          );
+          
+          // Verify against form data
+          const verificationResult = verifyLabel(match.form, ocrResult);
+          
+          return {
+            status: 'fulfilled' as const,
+            value: {
+              formIndex: i,
+              imageIndex: i,
+              brandName: match.form.brandName,
+              matchedBy: match.matchedBy,
+              result: verificationResult,
+            }
+          };
+        } catch (error) {
+          // If individual verification fails, record the error
+          return {
+            status: 'fulfilled' as const,
+            value: {
+              formIndex: i,
+              imageIndex: i,
+              brandName: match.form.brandName,
+              matchedBy: match.matchedBy,
+              result: {
+                success: false,
+                overallMatch: false,
+                details: {
+                  brandName: { match: false, expected: match.form.brandName, found: null, confidence: 0 },
+                  productType: { match: false, expected: match.form.productType, found: null, confidence: 0 },
+                  alcoholContent: { match: false, expected: match.form.alcoholContent, found: null, confidence: 0 },
+                  netContents: { match: false, expected: match.form.netContents, found: null, confidence: 0 },
+                  governmentWarning: { present: false, confidence: 0 },
+                },
+                discrepancies: ['brandName', 'productType', 'alcoholContent', 'netContents', 'governmentWarning'],
+                error: error instanceof Error ? error.message : 'Failed to process image',
+              },
+            }
+          };
+        }
+      })
+    );
+
+    // Wait for all verifications to complete
+    const settledResults = await Promise.all(verificationPromises);
+    const results = settledResults.map(r => r.value);
 
     return NextResponse.json(
       { results },

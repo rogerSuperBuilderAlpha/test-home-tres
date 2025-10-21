@@ -33,6 +33,14 @@ export default function Home() {
     setError(null);
     setResult(null);
 
+    // Scroll to loading section
+    setTimeout(() => {
+      const loadingSection = document.getElementById('loading-section');
+      if (loadingSection) {
+        loadingSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+
     try {
       const response = await fetch('/api/verify', {
         method: 'POST',
@@ -82,6 +90,14 @@ export default function Home() {
     setError(null);
     setBulkResults(null);
     setBulkProgress({ current: 0, total: forms.length });
+
+    // Scroll to loading section
+    setTimeout(() => {
+      const loadingSection = document.getElementById('loading-section');
+      if (loadingSection) {
+        loadingSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
 
     try {
       const response = await fetch('/api/bulk-verify', {
@@ -192,7 +208,11 @@ export default function Home() {
           <LabelForm key={resetKey} onSubmit={handleSubmit} isLoading={isLoading} />
 
           {/* Loading State */}
-          {isLoading && <LoadingProgress />}
+          {isLoading && (
+            <div id="loading-section">
+              <LoadingProgress />
+            </div>
+          )}
 
           {/* Results */}
           {result && !isLoading && (
@@ -208,16 +228,18 @@ export default function Home() {
 
           {/* Bulk Loading State */}
           {isLoading && (
-            <LoadingProgress 
-              steps={[
-                'Matching forms to label images...',
-                'Processing batch verification...',
-                `Analyzing ${bulkProgress.total} labels with AI...`,
-                'Comparing all fields...',
-                'Generating results dashboard...'
-              ]}
-              estimatedTime={bulkProgress.total * 5} // ~5 seconds per label
-            />
+            <div id="loading-section">
+              <LoadingProgress 
+                steps={[
+                  'Matching forms to label images...',
+                  'Processing batch verification...',
+                  `Analyzing ${bulkProgress.total} labels with AI...`,
+                  'Comparing all fields...',
+                  'Generating results dashboard...'
+                ]}
+                estimatedTime={bulkProgress.total * 5} // ~5 seconds per label
+              />
+            </div>
           )}
 
           {/* Bulk Results */}

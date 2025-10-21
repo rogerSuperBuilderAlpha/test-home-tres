@@ -320,43 +320,45 @@ The verification algorithm implements intelligent matching:
 2. **Whitespace Tolerance**: Extra spaces ignored
 3. **Number Extraction**: "45% ABV" and "45%" both match ABV of 45
 4. **Partial Type Matching**: "Bourbon" can match "Kentucky Straight Bourbon Whiskey"
-5. **Government Warning**: Just checking for presence, not exact wording (bonus feature would be exact match)
+5. **Government Warning**: Checks for exact TTB-compliant text (27 CFR 16.21) plus required phrases
 6. **Image Quality**: Assumes reasonably clear images; provides error message for unreadable images
 7. **Single Language**: English only (TTB labels are in English)
+8. **Manual Override**: Humans can override AI decisions when needed
+9. **Concurrency Control**: Bulk mode processes 5 labels concurrently with retry logic
 
 ### Known Limitations
 
 1. **OCR Accuracy**: Very stylized fonts or low-resolution images may not be read accurately
 2. **API Dependency**: Requires internet connection and valid OpenAI API key
-3. **Cost**: OpenAI API has usage costs (though minimal for this use case)
-4. **No Database**: Results are not persisted between sessions
-5. **Single Image**: Only processes one label at a time
-6. **Basic Fuzzy Matching**: Could be improved with Levenshtein distance or ML-based matching
+3. **Cost**: OpenAI API has usage costs (~$0.01 per label, ~$1.00 for 100 labels)
+4. **No Database**: Results are not persisted between sessions (export to PDF/CSV for records)
+5. **Bulk Timeout**: Large batches (100 labels) may approach 5-minute API timeout
+6. **Sequential CSV Parsing**: Very large CSV files may take time to parse
 
 ## 🔮 Future Enhancements
 
-If given more time, the following features could be added:
+Potential features for future iterations:
 
 ### High Priority
-- [ ] **Exact Government Warning Verification**: Compare full warning text word-for-word
-- [ ] **Multiple Image Upload**: Process multiple labels in one submission
-- [ ] **Result History**: Save previous verifications (add database)
-- [ ] **Image Highlighting**: Visually mark where text was found on the label
-- [ ] **PDF Support**: Handle PDF label submissions
+- [ ] **Image Highlighting**: Visually mark where text was found on the label with bounding boxes
+- [ ] **Result History**: Database to save previous verifications
+- [ ] **Automated E2E Tests**: Playwright/Cypress test suite
+- [ ] **PDF Label Support**: Handle PDF label submissions in addition to images
+- [ ] **Per-Row PDF in Bulk**: Export individual PDF for each label in bulk mode
 
 ### Medium Priority
-- [ ] **Product Type Templates**: Different required fields for beer/wine/spirits
-- [ ] **Batch Processing**: Upload multiple labels via CSV + images
-- [ ] **Export Results**: Download verification report as PDF
-- [ ] **Admin Dashboard**: View all submissions, statistics
-- [ ] **Fallback OCR**: Use Tesseract if OpenAI API fails
+- [ ] **OCR Fallback**: Use Tesseract when OpenAI API is unavailable
+- [ ] **Bulk Details Modal**: Structured modal instead of alert for bulk row details
+- [ ] **Admin Dashboard**: View all submissions with statistics and analytics
+- [ ] **Advanced Compliance**: Wine appellations, geographic indicators, TTB-specific rules
+- [ ] **Real-Time Bulk Progress**: Show "Processing 5 of 100..." live updates
 
 ### Low Priority
-- [ ] **User Authentication**: Save and track user submissions
-- [ ] **Collaboration Features**: Share verifications with team
-- [ ] **Advanced Compliance**: TTB-specific rules (wine designations, geographic indicators, etc.)
-- [ ] **Multi-language Support**: Handle labels in multiple languages
-- [ ] **Automated Testing**: E2E tests with Playwright
+- [ ] **User Authentication**: Account system to save and track verifications
+- [ ] **Collaboration Features**: Share verifications with team members
+- [ ] **Multi-language Support**: Handle international labels
+- [ ] **Image Quality Pre-Check**: Warn if image is too blurry before processing
+- [ ] **Proof-to-ABV Conversion**: Handle "90 Proof" and convert to ABV automatically
 
 ## 🐛 Troubleshooting
 
