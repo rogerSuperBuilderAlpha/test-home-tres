@@ -38,7 +38,7 @@ test.beforeEach(async ({ page }) => {
 test('bulk verification basic flow', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
-  await expect(page.getByTestId('app-title')).toBeVisible({ timeout: 30000 });
+  await expect(page).toHaveTitle(/TTB Label Verification/i);
 
   await page.getByRole('button', { name: /Bulk Upload/i }).click();
 

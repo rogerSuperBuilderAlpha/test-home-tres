@@ -31,7 +31,7 @@ test.beforeEach(async ({ page }) => {
 test('single verification happy path', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
-  await expect(page.getByTestId('app-title')).toBeVisible({ timeout: 30000 });
+  await expect(page).toHaveTitle(/TTB Label Verification/i);
   await expect(page.getByLabel(/Brand Name/i)).toBeVisible();
 
   await page.getByLabel(/Brand Name/i).fill('Old Tom Distillery');
