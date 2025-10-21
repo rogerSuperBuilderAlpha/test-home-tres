@@ -170,29 +170,48 @@ Vercel will automatically:
 doge20-takehome/
 ├── app/
 │   ├── api/
-│   │   └── verify/
-│   │       └── route.ts          # API endpoint for label verification
+│   │   ├── bulk-verify/route.ts   # Batch verification endpoint
+│   │   ├── scan-form/route.ts     # Form scanning endpoint
+│   │   └── verify/route.ts        # Single verification endpoint
 │   ├── layout.tsx                 # Root layout
-│   ├── page.tsx                   # Main application page
+│   ├── page.tsx                   # Main application with tabs
 │   └── globals.css                # Global styles
 ├── components/
-│   ├── LabelForm.tsx              # Form component
-│   ├── ImageUpload.tsx            # Image upload component
-│   └── VerificationResults.tsx    # Results display component
+│   ├── BulkResults.tsx            # Bulk results dashboard
+│   ├── BulkUpload.tsx             # Bulk upload interface
+│   ├── ImageUpload.tsx            # Image upload with camera
+│   ├── LabelForm.tsx              # Form with product type dropdown
+│   ├── LoadingProgress.tsx        # Advanced loading UI
+│   ├── TabNavigation.tsx          # Single/Bulk tabs
+│   └── VerificationResults.tsx    # Results with override feature
 ├── lib/
-│   ├── ocr.ts                     # OCR service (OpenAI Vision)
-│   └── verification.ts            # Matching logic
+│   ├── hooks.ts                   # Custom React hooks
+│   ├── ocr.ts                     # OpenAI Vision API service
+│   └── verification.ts            # Verification algorithms
 ├── types/
-│   └── index.ts                   # TypeScript type definitions
+│   └── index.ts                   # TypeScript definitions
 ├── public/
-│   └── sample-labels/             # Sample test images
-├── .env.example                   # Environment variables template
-├── .env.local                     # Your local environment variables (git-ignored)
+│   ├── sample-bulk-upload.csv     # CSV template for bulk upload
+│   └── test-label-generator.html  # Test label generator
+├── docs/                          # 📚 All documentation
+│   ├── QUICKSTART.md              # Quick setup guide
+│   ├── APPROACH.md                # Technical decisions
+│   ├── TESTING.md                 # Testing guide
+│   ├── DEPLOYMENT.md              # Deployment guide
+│   ├── FEATURES.md                # Feature roadmap
+│   ├── BONUS_FEATURES.md          # Bonus implementations
+│   ├── BULK_UPLOAD_GUIDE.md       # Bulk feature guide
+│   ├── NEXT_STEPS.md              # Action items
+│   ├── PROJECT_SUMMARY.md         # Project overview
+│   ├── FINAL_SUMMARY.md           # Complete summary
+│   └── CAMERA_FEATURE_GUIDE.md    # Camera usage
+├── env.template                   # Environment variables template
 ├── package.json
 ├── tsconfig.json
-├── tailwind.config.js
+├── tailwind.config.ts
 ├── next.config.js
-└── README.md
+├── LICENSE
+└── README.md                      # You are here!
 ```
 
 ## 🧠 Technical Approach
@@ -296,6 +315,29 @@ If given more time, the following features could be added:
 ## 📝 License
 
 This project is created as a take-home assignment and is for demonstration purposes.
+
+## 📚 Additional Documentation
+
+All detailed documentation is organized in the `/docs` folder:
+
+### Getting Started
+- **[Quick Start Guide](docs/QUICKSTART.md)** - Get running in 5 minutes
+- **[Next Steps](docs/NEXT_STEPS.md)** - Your action items after setup
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Deploy to Vercel step-by-step
+
+### Technical Details
+- **[Technical Approach](docs/APPROACH.md)** - Architecture and design decisions
+- **[Features Breakdown](docs/FEATURES.md)** - Complete feature roadmap
+- **[Bonus Features](docs/BONUS_FEATURES.md)** - All bonus implementations explained
+
+### User Guides
+- **[Testing Guide](docs/TESTING.md)** - 12 test scenarios with instructions
+- **[Bulk Upload Guide](docs/BULK_UPLOAD_GUIDE.md)** - Enterprise batch processing
+- **[Camera Feature Guide](docs/CAMERA_FEATURE_GUIDE.md)** - Mobile camera usage
+
+### Project Summaries
+- **[Project Summary](docs/PROJECT_SUMMARY.md)** - High-level overview
+- **[Final Summary](docs/FINAL_SUMMARY.md)** - Complete project statistics
 
 ## 🙋 Questions or Issues?
 
