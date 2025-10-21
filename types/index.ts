@@ -24,6 +24,9 @@ export interface FieldVerificationResult {
 export interface GovernmentWarningResult {
   present: boolean;
   text?: string; // The actual warning text found (if any)
+  confidence?: number; // Confidence score 0-100
+  missingPhrases?: string[]; // Array of required phrases that are missing
+  exact?: boolean; // Whether the warning text is exactly TTB-compliant
 }
 
 /**

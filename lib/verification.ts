@@ -1,5 +1,55 @@
 import { LabelFormData, OCRResult, VerificationResult, FieldVerificationResult } from '@/types';
 
+// Official TTB Government Warning Text (27 CFR 16.21)
+const OFFICIAL_WARNING_TEXT = `GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.`;
+
+// Key phrases that must be present
+const REQUIRED_WARNING_PHRASES = [
+  'GOVERNMENT WARNING',
+  'Surgeon General',
+  'pregnant',
+  'birth defects',
+  'drive',
+  'health problems'
+];
+
+/**
+ * Calculate Levenshtein distance between two strings (for fuzzy matching)
+ */
+function levenshteinDistance(str1: string, str2: string): number {
+  const m = str1.length;
+  const n = str2.length;
+  const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,    // deletion
+          dp[i][j - 1] + 1,    // insertion
+          dp[i - 1][j - 1] + 1 // substitution
+        );
+      }
+    }
+  }
+
+  return dp[m][n];
+}
+
+/**
+ * Calculate similarity percentage between two strings
+ */
+function calculateSimilarity(str1: string, str2: string): number {
+  const distance = levenshteinDistance(str1, str2);
+  const maxLength = Math.max(str1.length, str2.length);
+  return maxLength === 0 ? 100 : ((1 - distance / maxLength) * 100);
+}
+
 /**
  * Normalize text for comparison (lowercase, trim, remove extra spaces and special chars)
  */
@@ -43,7 +93,7 @@ function extractUnit(text: string): string | null {
 }
 
 /**
- * Verify brand name matches
+ * Verify brand name matches with fuzzy matching
  */
 function verifyBrandName(
   expected: string,
@@ -53,20 +103,32 @@ function verifyBrandName(
   const normalizedFullText = normalizeText(ocrResult.fullText);
   const normalizedOCRBrand = ocrResult.brandName ? normalizeText(ocrResult.brandName) : '';
 
-  // Check if expected brand appears in OCR brand name or full text
-  const matchInBrand = normalizedOCRBrand.includes(normalizedExpected);
-  const matchInFullText = normalizedFullText.includes(normalizedExpected);
-  const match = matchInBrand || matchInFullText;
+  // Check exact substring match first
+  const exactMatchInBrand = normalizedOCRBrand.includes(normalizedExpected);
+  const exactMatchInFullText = normalizedFullText.includes(normalizedExpected);
+  
+  // Calculate fuzzy match confidence
+  let confidence = 0;
+  if (exactMatchInBrand || exactMatchInFullText) {
+    confidence = 100; // Exact match
+  } else if (normalizedOCRBrand) {
+    // Try fuzzy matching with Levenshtein distance
+    confidence = calculateSimilarity(normalizedExpected, normalizedOCRBrand);
+  }
+
+  // Match if confidence is above 70%
+  const match = confidence >= 70;
 
   return {
     match,
     expected,
     found: ocrResult.brandName || (match ? 'Found in label text' : null),
+    confidence: Math.round(confidence),
   };
 }
 
 /**
- * Verify product type matches
+ * Verify product type matches with fuzzy matching
  */
 function verifyProductType(
   expected: string,
@@ -76,18 +138,30 @@ function verifyProductType(
   const normalizedFullText = normalizeText(ocrResult.fullText);
   const normalizedOCRType = ocrResult.productType ? normalizeText(ocrResult.productType) : '';
 
-  // Check for exact match or if expected is contained in OCR result
+  // Check for exact match
   const exactMatch = normalizedExpected === normalizedOCRType;
   const partialMatch = normalizedOCRType.includes(normalizedExpected) || 
                       normalizedExpected.includes(normalizedOCRType);
   const matchInFullText = normalizedFullText.includes(normalizedExpected);
   
-  const match = exactMatch || partialMatch || matchInFullText;
+  // Calculate confidence
+  let confidence = 0;
+  if (exactMatch) {
+    confidence = 100;
+  } else if (partialMatch || matchInFullText) {
+    confidence = 90; // Good partial match
+  } else if (normalizedOCRType) {
+    // Fuzzy match
+    confidence = calculateSimilarity(normalizedExpected, normalizedOCRType);
+  }
+
+  const match = confidence >= 70;
 
   return {
     match,
     expected,
     found: ocrResult.productType || (match ? 'Found in label text' : null),
+    confidence: Math.round(confidence),
   };
 }
 
@@ -105,6 +179,7 @@ function verifyAlcoholContent(
       match: false,
       expected,
       found: null,
+      confidence: 0,
     };
   }
 
@@ -115,6 +190,7 @@ function verifyAlcoholContent(
       match: false,
       expected: `${expectedNumber}%`,
       found: null,
+      confidence: 0,
     };
   }
 
@@ -124,17 +200,26 @@ function verifyAlcoholContent(
       match: false,
       expected: `${expectedNumber}%`,
       found: ocrABV,
+      confidence: 0,
     };
   }
 
-  // Allow small tolerance for rounding (±0.1%)
+  // Calculate confidence based on difference
+  const difference = Math.abs(expectedNumber - foundNumber);
   const tolerance = 0.1;
-  const match = Math.abs(expectedNumber - foundNumber) <= tolerance;
+  const match = difference <= tolerance;
+  
+  // Confidence decreases with difference
+  let confidence = 100;
+  if (difference > 0) {
+    confidence = Math.max(0, 100 - (difference * 20)); // Lose 20% per 1% difference
+  }
 
   return {
     match,
     expected: `${expectedNumber}%`,
     found: `${foundNumber}%`,
+    confidence: Math.round(confidence),
   };
 }
 
@@ -153,6 +238,7 @@ function verifyNetContents(
       match: false,
       expected,
       found: null,
+      confidence: 0,
     };
   }
 
@@ -162,6 +248,7 @@ function verifyNetContents(
       match: false,
       expected,
       found: null,
+      confidence: 0,
     };
   }
 
@@ -173,18 +260,88 @@ function verifyNetContents(
       match: false,
       expected,
       found: ocrVolume,
+      confidence: 0,
     };
   }
 
   // Check if numbers match and units match
-  const numbersMatch = Math.abs(expectedNumber - foundNumber) < 0.1;
+  const numberDifference = Math.abs(expectedNumber - foundNumber);
+  const numbersMatch = numberDifference < 0.1;
   const unitsMatch = expectedUnit === foundUnit;
   const match = numbersMatch && unitsMatch;
+
+  // Calculate confidence
+  let confidence = 0;
+  if (unitsMatch) {
+    confidence = 50; // Base for matching units
+    if (numbersMatch) {
+      confidence = 100; // Perfect match
+    } else {
+      // Deduct based on difference
+      const percentDiff = (numberDifference / expectedNumber) * 100;
+      confidence = Math.max(0, 100 - percentDiff * 2);
+    }
+  }
 
   return {
     match,
     expected,
     found: ocrVolume,
+    confidence: Math.round(confidence),
+  };
+}
+
+/**
+ * Verify government warning statement (detailed check)
+ */
+function verifyGovernmentWarning(ocrResult: OCRResult): {
+  present: boolean;
+  text?: string;
+  confidence?: number;
+  missingPhrases?: string[];
+  exact?: boolean;
+} {
+  const fullText = ocrResult.fullText.toLowerCase();
+  
+  // Check for presence of key phrases
+  const foundPhrases: string[] = [];
+  const missingPhrases: string[] = [];
+  
+  for (const phrase of REQUIRED_WARNING_PHRASES) {
+    if (fullText.includes(phrase.toLowerCase())) {
+      foundPhrases.push(phrase);
+    } else {
+      missingPhrases.push(phrase);
+    }
+  }
+
+  const present = foundPhrases.includes('GOVERNMENT WARNING');
+  
+  // Calculate confidence based on how many required phrases are present
+  const confidence = (foundPhrases.length / REQUIRED_WARNING_PHRASES.length) * 100;
+  
+  // Check if it's an exact match
+  const normalizedWarning = normalizeText(OFFICIAL_WARNING_TEXT);
+  const normalizedFullText = normalizeText(ocrResult.fullText);
+  const exact = normalizedFullText.includes(normalizedWarning);
+
+  let statusText = '';
+  if (exact) {
+    statusText = 'Exact TTB-compliant warning text detected';
+  } else if (present && missingPhrases.length === 0) {
+    statusText = 'All required warning phrases present';
+  } else if (present) {
+    statusText = 'Government warning present but incomplete';
+  } else {
+    statusText = 'Government warning missing';
+  }
+
+  return {
+    present,
+    text: statusText,
+    confidence: Math.round(confidence),
+    missingPhrases: missingPhrases.length > 0 ? missingPhrases : undefined,
+    exact,
   };
 }
 
@@ -201,11 +358,8 @@ export function verifyLabel(
   const alcoholContentResult = verifyAlcoholContent(formData.alcoholContent, ocrResult);
   const netContentsResult = verifyNetContents(formData.netContents, ocrResult);
 
-  // Government warning check
-  const governmentWarningResult = {
-    present: ocrResult.governmentWarning,
-    text: ocrResult.governmentWarning ? 'Government warning detected' : undefined,
-  };
+  // Detailed government warning check
+  const governmentWarningResult = verifyGovernmentWarning(ocrResult);
 
   // Collect discrepancies
   const discrepancies: string[] = [];

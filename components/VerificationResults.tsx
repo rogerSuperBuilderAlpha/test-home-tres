@@ -58,6 +58,7 @@ export default function VerificationResults({ result, onReset }: VerificationRes
               match={details.brandName.match}
               expected={details.brandName.expected}
               found={details.brandName.found}
+              confidence={details.brandName.confidence}
             />
 
             {/* Product Type */}
@@ -66,6 +67,7 @@ export default function VerificationResults({ result, onReset }: VerificationRes
               match={details.productType.match}
               expected={details.productType.expected}
               found={details.productType.found}
+              confidence={details.productType.confidence}
             />
 
             {/* Alcohol Content */}
@@ -74,6 +76,7 @@ export default function VerificationResults({ result, onReset }: VerificationRes
               match={details.alcoholContent.match}
               expected={details.alcoholContent.expected}
               found={details.alcoholContent.found}
+              confidence={details.alcoholContent.confidence}
             />
 
             {/* Net Contents */}
@@ -82,6 +85,7 @@ export default function VerificationResults({ result, onReset }: VerificationRes
               match={details.netContents.match}
               expected={details.netContents.expected}
               found={details.netContents.found}
+              confidence={details.netContents.confidence}
             />
 
             {/* Government Warning */}
@@ -98,18 +102,42 @@ export default function VerificationResults({ result, onReset }: VerificationRes
                 )}
               </div>
               <div className="flex-grow">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-gray-900">Government Warning</span>
                   <span className={`text-sm font-semibold ${details.governmentWarning.present ? 'text-success' : 'text-error'}`}>
                     {details.governmentWarning.present ? 'Present' : 'Missing'}
                   </span>
+                  {details.governmentWarning.exact && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                      ✓ TTB-Compliant
+                    </span>
+                  )}
+                  {details.governmentWarning.confidence !== undefined && (
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      details.governmentWarning.confidence >= 90 ? 'bg-green-100 text-green-800' :
+                      details.governmentWarning.confidence >= 70 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {details.governmentWarning.confidence}% confidence
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
-                  {details.governmentWarning.present 
+                  {details.governmentWarning.text || (details.governmentWarning.present 
                     ? 'Required government warning statement was found on the label.'
                     : 'Required government warning statement is missing from the label.'
-                  }
+                  )}
                 </p>
+                {details.governmentWarning.missingPhrases && details.governmentWarning.missingPhrases.length > 0 && (
+                  <div className="mt-2 text-sm text-error">
+                    <p className="font-medium">Missing required phrases:</p>
+                    <ul className="list-disc list-inside mt-1">
+                      {details.governmentWarning.missingPhrases.map((phrase, idx) => (
+                        <li key={idx}>{phrase}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -134,9 +162,10 @@ interface ResultItemProps {
   match: boolean;
   expected: string;
   found: string | null;
+  confidence?: number;
 }
 
-function ResultItem({ label, match, expected, found }: ResultItemProps) {
+function ResultItem({ label, match, expected, found, confidence }: ResultItemProps) {
   return (
     <div className="flex items-start gap-3 p-4 border rounded-lg">
       <div className="flex-shrink-0 mt-0.5">
@@ -151,11 +180,20 @@ function ResultItem({ label, match, expected, found }: ResultItemProps) {
         )}
       </div>
       <div className="flex-grow">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-gray-900">{label}</span>
           <span className={`text-sm font-semibold ${match ? 'text-success' : 'text-error'}`}>
             {match ? 'Match' : 'Mismatch'}
           </span>
+          {confidence !== undefined && (
+            <span className={`text-xs px-2 py-0.5 rounded ${
+              confidence >= 90 ? 'bg-green-100 text-green-800' :
+              confidence >= 70 ? 'bg-yellow-100 text-yellow-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              {confidence}% confidence
+            </span>
+          )}
         </div>
         <div className="mt-2 text-sm space-y-1">
           <div>
